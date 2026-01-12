@@ -29,58 +29,56 @@ export default function App() {
   const [salon, setSalon] = useState("Salon 1");
   const [session, setSession] = useState("Sabah");
   const [data, setData] = useState(createEmpty());
+  const [dragged, setDragged] = useState(null);
 
-  const update = (machine, field, value) => {
+  const update = (machine, newData) => {
     setData(prev => ({
       ...prev,
       [salon]: {
         ...prev[salon],
         [session]: {
           ...prev[salon][session],
-          [machine]: {
-            ...prev[salon][session][machine],
-            [field]: value,
-            durum:
-              field === "durum"
-                ? value
-                : value
-                ? "Aktif"
-                : "Boş"
-          }
+          [machine]: newData
         }
       }
     }));
+  };
+
+  const onDrop = (target) => {
+    if (!dragged || dragged === target) return;
+
+    const sourceData = data[salon][session][dragged];
+    const targetData = data[salon][session][target];
+
+    if (!sourceData.hasta) return;
+    if (targetData.hasta) {
+      alert("Bu makine dolu!");
+      return;
+    }
+    if (targetData.durum === "Arızalı") {
+      alert("Makine arızalı!");
+      return;
+    }
+
+    update(target, { ...sourceData, durum: "Aktif" });
+    update(dragged, { hasta: "", dzy: "", sls: "", durum: "Boş" });
+    setDragged(null);
   };
 
   return (
     <div style={{ padding: 20, fontFamily: "Arial" }}>
       <h1>Diyaliz Planlama Sistemi</h1>
 
-      {/* ÜST KONTROLLER */}
       <div style={{ marginBottom: 15 }}>
         {sessions.map(s => (
-          <button
-            key={s}
-            onClick={() => setSession(s)}
-            style={{
-              marginRight: 5,
-              background: session === s ? "#4caf50" : "#ccc"
-            }}
-          >
+          <button key={s} onClick={() => setSession(s)}
+            style={{ marginRight: 5, background: session === s ? "#4caf50" : "#ccc" }}>
             {s}
           </button>
         ))}
-
         {salons.map(sl => (
-          <button
-            key={sl}
-            onClick={() => setSalon(sl)}
-            style={{
-              marginLeft: 10,
-              background: salon === sl ? "#1976d2" : "#ccc",
-              color: "white"
-            }}
-          >
+          <button key={sl} onClick={() => setSalon(sl)}
+            style={{ marginLeft: 10, background: salon === sl ? "#1976d2" : "#ccc", color: "white" }}>
             {sl}
           </button>
         ))}
@@ -88,7 +86,6 @@ export default function App() {
 
       <h3>{salon} – {session} Seansı</h3>
 
-      {/* MAKİNE KARTLARI */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
@@ -97,24 +94,32 @@ export default function App() {
         {machines.map(m => {
           const item = data[salon][session][m];
           return (
-            <div key={m} style={{
-              border: "1px solid #ccc",
-              borderRadius: 8,
-              padding: 12,
-              background: statusColors[item.durum]
-            }}>
+            <div
+              key={m}
+              draggable={!!item.hasta}
+              onDragStart={() => setDragged(m)}
+              onDragOver={e => e.preventDefault()}
+              onDrop={() => onDrop(m)}
+              style={{
+                border: "1px solid #ccc",
+                borderRadius: 8,
+                padding: 12,
+                background: statusColors[item.durum],
+                cursor: item.hasta ? "grab" : "default"
+              }}
+            >
               <strong>{m}</strong>
 
               <input
                 placeholder="Hasta adı"
                 value={item.hasta}
-                onChange={e => update(m, "hasta", e.target.value)}
+                onChange={e => update(m, { ...item, hasta: e.target.value })}
                 style={{ width: "100%", marginTop: 6 }}
               />
 
               <select
                 value={item.dzy}
-                onChange={e => update(m, "dzy", e.target.value)}
+                onChange={e => update(m, { ...item, dzy: e.target.value })}
                 style={{ width: "100%", marginTop: 5 }}
               >
                 <option value="">DYZ</option>
@@ -125,7 +130,7 @@ export default function App() {
 
               <select
                 value={item.sls}
-                onChange={e => update(m, "sls", e.target.value)}
+                onChange={e => update(m, { ...item, sls: e.target.value })}
                 style={{ width: "100%", marginTop: 5 }}
               >
                 <option value="">SLS</option>
@@ -134,18 +139,9 @@ export default function App() {
                 <option value="K2/1.75">K2 / 1.75</option>
               </select>
 
-              <select
-                value={item.durum}
-                onChange={e => update(m, "durum", e.target.value)}
-                style={{ width: "100%", marginTop: 5 }}
-              >
-                <option>Boş</option>
-                <option>Aktif</option>
-                <option>Gelmedi</option>
-                <option>Ex</option>
-                <option>Yedek</option>
-                <option>Arızalı</option>
-              </select>
+              <div style={{ marginTop: 5, fontSize: 12 }}>
+                Durum: <strong>{item.durum}</strong>
+              </div>
             </div>
           );
         })}
