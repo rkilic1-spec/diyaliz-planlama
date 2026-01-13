@@ -51,6 +51,44 @@ const update = (machine, newData) => {
     durum: hasData ? "Aktif" : "Boş"
   };
 
+  setData(prev => {
+    const next = {
+      ...prev,
+      [salon]: {
+        ...prev[salon],
+        [session]: {
+          ...prev[salon][session],
+          [machine]: updated
+        }
+      }
+    };
+
+    // 🔴 EN KRİTİK SATIR: backend'e KESİN kayıt
+    fetch("https://diyaliz-planlama-1.onrender.com/schedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: new Date().toISOString().slice(0, 10),
+        salon,
+        session,
+        machine,
+        patient: updated.hasta,
+        dialyzer: updated.dzy,
+        solution: updated.sls,
+        status: updated.durum
+      })
+    });
+
+    return next;
+  });
+};
+
+
+  const updated = {
+    ...newData,
+    durum: hasData ? "Aktif" : "Boş"
+  };
+
   setData(prev => ({
     ...prev,
     [salon]: {
