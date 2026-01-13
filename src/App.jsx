@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+const API_URL = "https://diyaliz-planlama-1.onrender.com";
 
 const machines = ["NEG01", "NEG02", "NEG03", "NEG04", "YEDEK"];
 const salons = ["Salon 1", "Salon 2"];
@@ -29,6 +30,14 @@ export default function App() {
   const [salon, setSalon] = useState("Salon 1");
   const [session, setSession] = useState("Sabah");
   const [data, setData] = useState(createEmpty());
+  useEffect(() => {
+  fetch(`${API_URL}/schedule`)
+    .then(res => res.json())
+    .then(rows => {
+      console.log("Backend'den gelen kayıtlar:", rows);
+    });
+}, []);
+
   const [dragged, setDragged] = useState(null);
 
   const update = (machine, newData) => {
