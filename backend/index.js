@@ -40,3 +40,39 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Backend running on port", PORT);
 });
+// GÜNLÜK PLAN GETİR
+app.get("/schedule", (req, res) => {
+  const rows = db.prepare("SELECT * FROM schedule").all();
+  res.json(rows);
+});
+
+// GÜNLÜK PLAN KAYDET
+app.post("/schedule", (req, res) => {
+  const {
+    date,
+    salon,
+    session,
+    machine,
+    patient,
+    dialyzer,
+    solution,
+    status
+  } = req.body;
+
+  db.prepare(`
+    INSERT INTO schedule
+    (date, salon, session, machine, patient, dialyzer, solution, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    date,
+    salon,
+    session,
+    machine,
+    patient,
+    dialyzer,
+    solution,
+    status
+  );
+
+  res.json({ success: true });
+});
