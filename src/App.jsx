@@ -40,18 +40,32 @@ export default function App() {
 
   const [dragged, setDragged] = useState(null);
 
-  const update = (machine, newData) => {
-    setData(prev => ({
-      ...prev,
-      [salon]: {
-        ...prev[salon],
-        [session]: {
-          ...prev[salon][session],
-          [machine]: newData
-        }
-      }
-    }));
+const update = (machine, newData) => {
+  const hasData =
+    newData.hasta ||
+    newData.dzy ||
+    newData.sls;
+
+  const updated = {
+    ...newData,
+    durum: hasData ? "Aktif" : "Boş"
   };
+
+  setData(prev => ({
+    ...prev,
+    [salon]: {
+      ...prev[salon],
+      [session]: {
+        ...prev[salon][session],
+        [machine]: updated
+      }
+    }
+  }));
+
+  // Backend'e kaydet
+  saveToBackend(machine, updated);
+};
+
 
   const onDrop = (target) => {
     if (!dragged || dragged === target) return;
