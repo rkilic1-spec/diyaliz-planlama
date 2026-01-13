@@ -59,20 +59,30 @@ app.post("/schedule", (req, res) => {
     status
   } = req.body;
 
+  // Aynı gün / salon / seans / makine varsa sil
   db.prepare(`
-    INSERT INTO schedule
-    (date, salon, session, machine, patient, dialyzer, solution, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    date,
-    salon,
-    session,
-    machine,
-    patient,
-    dialyzer,
-    solution,
-    status
-  );
+    DELETE FROM schedule
+    WHERE date = ? AND salon = ? AND session = ? AND machine = ?
+  `).run(date, salon, session, machine);
+
+  // Hasta varsa yeniden ekle
+  if (patient) {
+    db.prepare(`
+      INSERT INTO schedule
+      (date, salon, session, machine, patient, dialyzer, solution, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      date,
+      salon,
+      session,
+      machine,
+      patient,
+      dialyzer,
+      solution,
+      status
+    );
+  }
 
   res.json({ success: true });
 });
+
