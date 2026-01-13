@@ -1,0 +1,52 @@
+<script>
+const API_BASE = "https://diyaliz-planlama-1.onrender.com";
+
+// Kaydet
+async function saveSchedule(cihaz, data) {
+  await fetch(`${API_BASE}/schedule`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      cihaz,
+      ...data
+    })
+  });
+}
+
+// Yükle
+async function loadSchedule() {
+  const res = await fetch(`${API_BASE}/schedule`);
+  const list = await res.json();
+
+  list.forEach(item => {
+    const card = document.querySelector(`[data-cihaz="${item.cihaz}"]`);
+    if (!card) return;
+
+    card.querySelector(".hasta").value = item.hasta || "";
+    card.querySelector(".dyz").value = item.dyz || "";
+    card.querySelector(".sls").value = item.sls || "";
+    card.querySelector(".durum").innerText = "Durum: Aktif";
+  });
+}
+
+// Event bağla
+document.querySelectorAll(".cihaz-card").forEach(card => {
+  const cihaz = card.dataset.cihaz;
+
+  const hasta = card.querySelector(".hasta");
+  const dyz = card.querySelector(".dyz");
+  const sls = card.querySelector(".sls");
+
+  [hasta, dyz, sls].forEach(el => {
+    el.addEventListener("change", () => {
+      saveSchedule(cihaz, {
+        hasta: hasta.value,
+        dyz: dyz.value,
+        sls: sls.value
+      });
+    });
+  });
+});
+
+loadSchedule();
+</script>
