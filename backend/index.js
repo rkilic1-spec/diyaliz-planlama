@@ -1,88 +1,63 @@
 import express from "express";
 import cors from "cors";
-import Database from "better-sqlite3";
+import pg from "pg";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const db = new Database("database.db");
+// PostgreSQL bağlantısı
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
-// TABLOLAR
-db.prepare(`
-  CREATE TABLE IF NOT EXISTS patients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    active INTEGER
-  )
-`).run();
-
-db.prepare(`
+// TABLO OLUŞTUR (yoksa)
+await pool.query(`
   CREATE TABLE IF NOT EXISTS schedule (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT,
+    id SERIAL PRIMARY KEY,
     salon TEXT,
-    session TEXT,
-    machine TEXT,
-    patient TEXT,
-    dialyzer TEXT,
-    solution TEXT,
-    status TEXT
+    seans TEXT,
+    cihaz TEXT,
+    hasta TEXT,
+    dyz TEXT,
+    sls TEXT,
+    durum TEXT
   )
-`).run();
+`);
 
-// TEST ENDPOINT
 app.get("/", (req, res) => {
   res.json({ status: "Backend çalışıyor" });
 });
 
+// TÜM KAYITLARI GETİR
+app.get("/schedule", async (req, res) => {
+  const result = await pool.query("SELECT * FROM schedule");
+  res.json(result.rows);
+});
+
+// KAYDET / GÜNCELLE
+app.post("/schedule", async (req, res) => {
+  const { salon, seans, cihaz, hasta, dyz, sls, durum } = req.body;
+
+  await pool.query(
+    `
+    INSERT INTO schedule (salon, seans, cihaz, hasta, dyz, sls, durum)
+    VALUES ($1,$2,$3,$4,$5,$6,$7)
+    ON CONFLICT (salon, seans, cihaz)
+    DO UPDATE SET
+      hasta = EXCLUDED.hasta,
+      dyz = EXCLUDED.dyz,
+      sls = EXCLUDED.sls,
+      durum = EXCLUDED.durum
+    `,
+    [salon, seans, cihaz, hasta, dyz, sls, durum]
+  );
+
+  res.json({ ok: true });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Backend running on port", PORT);
+  console.log("Backend çalışıyor:", PORT);
 });
-// GÜNLÜK PLAN GETİR
-app.get("/schedule", (req, res) => {
-  const rows = db.prepare("SELECT * FROM schedule").all();
-  res.json(rows);
-});
-
-// GÜNLÜK PLAN KAYDET
-app.post("/schedule", (req, res) => {
-  const {
-    date,
-    salon,
-    session,
-    machine,
-    patient,
-    dialyzer,
-    solution,
-    status
-  } = req.body;
-
-  // Aynı gün / salon / seans / makine varsa sil
-  db.prepare(`
-    DELETE FROM schedule
-    WHERE date = ? AND salon = ? AND session = ? AND machine = ?
-  `).run(date, salon, session, machine);
-
-  // Hasta varsa yeniden ekle
-  if (patient) {
-    db.prepare(`
-      INSERT INTO schedule
-      (date, salon, session, machine, patient, dialyzer, solution, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      date,
-      salon,
-      session,
-      machine,
-      patient,
-      dialyzer,
-      solution,
-      status
-    );
-  }
-
-  res.json({ success: true });
-});
-
